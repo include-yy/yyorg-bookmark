@@ -1,0 +1,148 @@
+* Bookmarks
+** [[https://www.javatpoint.com/mime-protocol][MIME Protocol | Multipurpose Internet Mail Extensions - javatpoint]] 
+:PROPERTIES:
+:YYOB-ID: 107
+:YYOB-CREATE-TIME: <2022-08-01 Mon 23:28>
+:YYOB-MD5: 8651897f265b83938c8eeea9f151e4c6
+:END:
+** [[https://prinsss.github.io/use-multiple-threads-to-download-pixiv-anime/][Python 多线程下载 Pixiv 动图 - PRIN BLOG]] :ATTACH:
+:PROPERTIES:
+:YYOB-ID: 106
+:YYOB-CREATE-TIME: <2022-08-01 Mon 23:07>
+:YYOB-MD5: dc7380d8ec051492cbafdef5e992fd5d
+:ID:       651e18d3-d16b-4ceb-a006-6e6e7d335f8e
+:END:
+** [[https://orgmode.org/org.html#The-capture-protocol][The Org Manual]] 
+:PROPERTIES:
+:YYOB-ID: 105
+:YYOB-CREATE-TIME: <2022-08-01 Mon 08:53>
+:YYOB-MD5: 42e64f4d95e370649fc44bb8b715b536
+:END:
+Activating the “capture” handler pops up a ‘Capture’
+** [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html][GNU Emacs-Lisp ]]
+:PROPERTIES:
+:YYOB-ID: 104
+:YYOB-CREATE-TIME: <2022-08-01 Mon 08:43>
+:YYOB-MD5: e3e068671fd8af8bdd9df20e7ec9a53e
+:ID:       616eea4f-d624-45ce-9271-e211ebcc4a59
+:END:
+** [[https://www.reddit.com/r/emacs/comments/bshrg0/orgmode_for_browser_bookmarks/][org-mode for browser bookmarks : emacs]]
+:PROPERTIES:
+:YYOB-ID: 101
+:YYOB-CREATE-TIME: <2022-08-01 Mon 03:34>
+:YYOB-MD5: 3e187482e6b6e353d30efe36008e0fe2
+:ID:       8a62829c-cd05-473d-9131-4ea6eac6957e
+:END:
+** [[https://translate.google.com/?sl=zh-CN&tl=en&text=%E5%BD%92%E9%9B%B6&op=translate][Google 翻译]]
+:PROPERTIES:
+:YYOB-ID: 35
+:YYOB-CREATE-TIME: <2022-08-01 Mon 01:58>
+:YYOB-MD5: 85412e73793795ae1466fd61d2218ad7
+:END:
+** [[https://emacs-china.org/t/topic/5494][从浏览器一键保存书签到 Org Mode - Org-mode - Emacs China]]
+:PROPERTIES:
+:YYOB-ID: 34
+:YYOB-CREATE-TIME: <2022-08-01 Mon 01:25>
+:YYOB-MD5: 85dcf771f0f7459255863bc7aadc9649
+:ID:       8b83ecd0-909c-48e8-b4eb-efc62d392ab6
+:END:
+** [[https://orgmode.org/org.html#Template-expansion][The Org Manual]]
+:PROPERTIES:
+:YYOB-ID: 27
+:YYOB-CREATE-TIME: <2022-08-01 Mon 01:05>
+:YYOB-MD5: 5af9f2d15d83c43b3831e216d94adf8c
+:ID:       72389d16-a09e-4428-9541-ad4be15d7953
+:END:
+** [[https://github.com/p-kolacz/org-linkz][p-kolacz/org-linkz: Managing browser links in org file.]]
+:PROPERTIES:
+:YYOB-ID: 7
+:YYOB-CREATE-TIME: <2022-08-01 Mon 00:33>
+:YYOB-MD5: 801415687a7bd8f431c3226c6c700f3b
+:END:
+* YYOB-MANAGEMENT
+:PROPERTIES:
+:YYOB-COUNTER: 108
+:END:
+
+#+NAME: startup
+#+BEGIN_SRC emacs-lisp :results none
+  (require 'yyorg-bookmark)
+
+  (setq lexical-binding t)
+  (setq-local yyob-use-example t)
+  (setq-local yyob-use-cache t)
+  (setq-local yyob-use-protocol t)
+  (setq-local yyob-headline "Bookmarks")
+  (setq-local org-attach-directory "yyob_data/")
+
+  ;;get current items' md5 value, and add to hashtable
+  (when yyob-use-cache
+    (setq-local yyob-hashtable (make-hash-table :test 'equal))
+    (let* ((pro-list (yyorg-bookmark-get-all-entries-properties-under-headline
+		      '("YYOB-ID" "YYOB-MD5") yyob-headline)))
+      (mapc (lambda (x) (puthash (cdr (assoc "YYOB-MD5" x))
+				 (cdr (assoc "YYOB-ID" x))
+				 yyob-hashtable))
+	    pro-list)))
+
+  ;; example add template
+  ;; try it with M-x org-capture l
+  (when yyob-use-example
+    (yyorg-bookmark-add-template
+     :key "l"
+     :desc "Add browser bookmark"
+     :type 'entry
+     :target `(file+headline ,(buffer-file-name) "Bookmarks")
+     :temp "* %c %^g\n:PROPERTIES:\n:YYOB-CREATE-TIME: %T\n:YYOB-ID: %(yyorg-bookmark-control-key-counter \"l\")\n:END:"
+     :props '(:prepend t)))
+
+  ;; use org-protocol
+  (when (and yyob-use-protocol yyob-use-cache)
+    (yyorg-bookmark-add-template
+     :key "yyobp"
+     :desc "Add browser bookmark"
+     :type 'entry
+     :target `(file+headline ,(buffer-file-name) "Bookmarks")
+     :temp "* [[%:link][%:description]] %(yyorg-bookmark-add-repeat-tag (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable) 'gethash)\n:PROPERTIES:\n:YYOB-ID: %(if (string= (yyorg-bookmark-add-repeat-tag (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable) 'gethash) \"\") (progn (puthash (md5 \"%:link\") (yyorg-bookmark-control-key-counter \"yyobp\" 'z) (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable)) (yyorg-bookmark-control-key-counter \"yyobp\")) (gethash (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable)))\n:YYOB-CREATE-TIME: %T\n:YYOB-MD5: %(md5 \"%:link\")\n:END:%(if (string= \"\" \"%i\") \"\" \"\n%i\")"
+     :props '(:prepend t :immediate-finish t :jump-to-captured t)))
+
+  ;; remove/add function in buffer
+  (when yyob-use-cache
+    (setq-local yyob-remove-func
+		(lambda ()
+		  "remove headline and also update hashtable"
+		  (let ((h-md5 (yyorg-bookmark--get-property "YYOB-MD5" t))
+			(h-id (yyorg-bookmark--get-property "YYOB-ID" t)))
+		    (org-cut-subtree)
+		    (if (org-find-property "YYOB-ID" h-id)
+			(message "one bookmark killed")
+		      (progn (remhash h-md5 (yyorg-bookmark-get-local-value "yyobp" 'yyob-hashtable))
+			     (message "last one killed"))))))
+    (local-set-key (kbd "C-c k")
+		   (lambda ()
+		     (interactive)
+		     (funcall (yyorg-bookmark-get-local-value "yyobp" 'yyob-remove-func))))
+    (setq-local yyob-insert-func
+		(lambda ()
+		  "add headline to hash table"
+		  (let* ((h-md5 (yyorg-bookmark--get-property "YYOB-MD5" t))
+			 (h-id (yyorg-bookmark--get-property "YYOB-ID" t)))
+		    (if (gethash h-md5 (yyorg-bookmark-get-local-value "yyobp" 'yyob-hashtable))
+			(message "add a already exist bookmark")
+		      (message "add a bookmark"))
+		    (puthash h-md5 h-id (yyorg-bookmark-get-local-value "yyobp" 'yyob-hashtable)))))
+    (local-set-key (kbd "C-c i")
+		   (lambda ()
+		     (interactive)
+		     (funcall (yyorg-bookmark-get-local-value "yyobp" 'yyob-insert-func)))))
+
+  (local-set-key (kbd "C-c u")
+		 'yyorg-bookmark-attach-use-wget-on-headline)
+#+END_SRC
+
+# Local Variables:
+# org-confirm-babel-evaluate: nil 
+# eval: (progn (org-babel-goto-named-src-block "startup") (org-babel-execute-src-block) (outline-hide-sublevels 1))
+# End:
+
+

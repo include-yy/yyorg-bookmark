@@ -1,0 +1,13 @@
+REGEDIT4
+; see https://orgmode.org/worg/org-contrib/org-protocol.html
+; and https://github.com/sprig/org-capture-extension
+
+[HKEY_CLASSES_ROOT\org-protocol]
+@="URL:Org Protocol"
+"URL Protocol"=""
+[HKEY_CLASSES_ROOT\org-protocol\shell]
+[HKEY_CLASSES_ROOT\org-protocol\shell\open]
+[HKEY_CLASSES_ROOT\org-protocol\shell\open\command]
+
+;use you own path to emacsclientw.exe
+@="\"path\\to\\your\\emacs\\bin\\emacsclientw.exe" \"%1\""
