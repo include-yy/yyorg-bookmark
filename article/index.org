@@ -1,0 +1,589 @@
+* 使用 org-mode 管理书签
+
+阅读这一节需要你对 org-mode 有较为全面的了解（至少要用过基本功能），没用过的话可以阅读 [[https://orgmode.org/manual][The Org Manual]]（或者是 =M-x info= 再找 Org，为了写这一部分我花了两天时间把整个文档读了一遍）。当然我更建议读 [[https://orgmode.org/guide/index.html][Org Mode Compact Guide]]，这个更加简单。
+
+** 为什么选择 org-mode
+
+这一部分可看作我给 org-mode 和 emacs 做的广告。（笑）
+
+emacs 是一款活化石级别的编辑器，适配的平台极其广泛，且至今仍在活跃开发中，目前最新的版本（29）已经加入了 sqlite 支持。换句话说，使用 emacs 不用担心出现一个平台可用而另一平台不可用的问题。自 1975 年开始，有无数的人为 emacs 写过代码，这也就意味着 emacs 具有非常丰富的生态，在遇到问题时可以在他人的代码中寻求解决方案。
+
+org-mode 可以用来记笔记，做项目规划，记录时间日期，进行文学编程等。换句话的话它就是个通用的文本管理系统，提供了丰富的功能。考虑到文本文件是一种“放之四海而皆准”的文件格式（换句话说就是只有基本文本），我准备使用文本来保存书签。利用 org-mode 的功能可以方便地实现增删改查等功能，这些会在后面的内容中讲到。
+
+不过话又说回来，不管是 emacs 还是 org-mode 都有一定的学习成本，我属于是沉没成本太高了，如果没有了解到 emacs 的话我也许就直接使用浏览器自带书签管理功能了。
+
+** 计划实现的功能
+
+参考浏览器书签，buku 等等管理软件，这里列出我想要实现的功能，考虑各方面因素，我应该不会全部实现。
+
+*** DONE 基本的增删改查 [3/3]
+
+**** DONE 增加
+
+最直接的添加方法是从浏览器中复制 url 再放到 org 文件中。但这样显然称不上快捷，毕竟浏览器只要点一下星标就可以设置书签的标题文本和存放位置，这就像个模板一样，只需要往里面填需要的信息就行了。
+
+这个功能可以使用 org-capture 来实现，通过编写 capture 模板来添加 url 和附加信息，这样就不用手动敲入 =NAME= =DESCRIPTION= 或是 =URL= 等固定名字了。这里有篇文章可作参考：[[https://dewaka.com/blog/bookmarking-with-org-mode/][bookmarking with org-mode]]
+
+另外，也许可以考虑使用 org-mode 的 protocol 功能和一些浏览器插件来实现一键保存，就像这个帖子提到的那样：[[https://emacs-china.org/t/topic/5494][从浏览器一键保存书签到 Org Mode]]
+
+**** DONE 删除和修改
+
+修改自然不用说，emacs 的本工作就是编辑文本，删除的话可以使用 =C-c C-x C-w= （org-cut-special）来删除一整个标题的内容。
+
+**** DONE 查找
+
+一般浏览器支持 name 和 url 查找，这些功能 emacs 自带的搜索自然不在话下，在 emacs 中也可以很方便地使用正则进行查找。
+
+除了文本查找外自然还需要基于标签（tag）的查找，这个可以考虑使用 org-agenda 的功能来实现。我也许会添加基于时间的查找功能，这样就可以根据时间段进行查找（算了算了）。
+
+org-agenda 应该是基于文本的查找，既然 emacs29 都内置数据库了，有时间的话我会考虑用数据库来实现更加快速的查找。不过要体现出数据库的优势也许得上万甚至上十万书签了。等到 29 出正式版再说吧。
+
+*** DONE 分类与 tag
+
+浏览器提供了文件夹式的分类功能，将一个个书签放入书签文件夹就相当于给书签贴上了标签，方便根据分类进行查找。在 org-mode 中要实现分层分类功能，可以考虑使用属性（PROPERTIES）来表明该 HEADLINE 是书签实体还是分类。具体来说的话就像这样：
+
+#+BEGIN_SRC text
+ * Search Engine
+ :PROPERTY:
+ :Is-Folder: t
+ :END:
+ ** Baidu
+ :PROPERTIES:
+ :Is-Folder : nil
+ :END:
+ www.baidu.com
+ ** google
+ :PROPERTIES:
+ :Is-Folder : nil
+ :END:
+ www.google.com
+ ......
+#+END_SRC
+
+不过我不打算使用这种分层分类的方式，如上文所见，我不是太喜欢它，分类层级太多的话查找起来并不方便。我准备直接使用类似表格的格式，也就是只使用同一级标题表示书签，这样实现起来也更加方便。
+
+存储格式只有一层的话如何分类呢？使用 org-mode 的 tag 功能可以实现。而且 org-mode 的 tag 还支持嵌套，需要的话可以实现基于 tag 的分层。
+
+*** DONE 归档与同步
+
+归档非常简单，直接使用 org-mode 的 archive 功能即可，将当前文件内的全部数据归入另一文件中。org-mode 还支持所谓的内部归档，加上 =:ARCHIVE:= 的 tag 即可。使用 org-agenda 还可以对归档文件进行方便地搜索。
+
+至于同步问题，无论是自建服务器提供同步功能，还是使用同步盘服务都可以（我已经把浏览器同步排除了）。我使用了两年的 Onedrive，速度还行，同步效果也不错，就是有点小贵。最近发现金山云盘有 1 个 G 的免费空间，就算开会员也比 Ondrive 要便宜不少，暂时先用着。
+
+这里还是要说一句，不管是自建还是使用云盘同步，数据都不可能是绝对安全的，一定要做好本地备份。
+
+*** TODO 与浏览器的互操作
+
+在 org-mode 中，通过点击链接或 =C-c C-o= 即可在默认浏览器中打开链接，但这还是比不上从浏览器中直接点方便。要是能够同步 org 文件和书签栏的话效果应该挺不错的，这就需要我去学习怎么写插件了。使用数据库来与浏览器交互应该会更好，所以等 29 吧（笑）。
+
+除了上面的愿景，还可以考虑实现从 Edge 或 firefox 的书签导出文件中导入书签，以及从 org 中导出 Edge 或 firefox 可识别的书签文件。这部分应该可以参考 buku 的代码。
+
+*** TODO 其他
+
+- [ ] 如果使用 sqlite 就可对数据进行加密（免费版好像不行...，需要使用 SEE 加密工具），这样应该会更加安全一点，也许可以做一个写入和读出数据库的功能，实现 org 文本和数据库的无缝转换
+- [ ] 如果功能足够丰富的话，可以考虑写个 minor-mode
+- [X] 添加下载网页的功能，把值得收藏的网页下载并存储下来
+
+暂时就这么多吧。
+
+*** 数据格式设计
+
+在这一节的最后我们说下书签模板的设计。
+
+如前所述，我不会采用嵌套标题来表示分层分类格式，那样不便于一些遍历操作。我会使用简单的同一级标题来保存。标题中的内容就是带描述的链接，这样鼠标一点就可以打开链接。tag 就是它的分类。一个标题可有多个 tag。
+
+那么一个项需要具有哪些元素呢？
+
+- =url= 和 =description= 可使用 org 的默认格式表示： =[[link][description]]= 。当在标题上按下 C-c C-o 或单击鼠标时就可在浏览器打开该网页
+- =tag= tag 直接放在标题后面，使用 =:= 分隔，举例来说是这样： =:a:b:c:=
+- =PROPERTIES= 里面存放链接添加时间等日常无需了解的数据
+- =text= 放在标题的正文部分，对书签的内容做进一步说明
+
+  
+把整个网站下载下来使用 org-attach 保存也算是一种备份手段，我会在后文说明实现方法以及演示使用方法。它为每个书签分配一个唯一的 ID 值和唯一的文件夹位置，需要保存的文件可放在文件夹内。（功能描述在[[https://orgmode.org/manual/Attachments.html][这里]]）
+
+以下为一个示例：
+
+#+BEGIN_SRC text
+  ,* [[https://baidu.com][百度一下，你就知道]] :search:ATTACH:
+  :PROPERTIES:
+  :ID: 114514-191981
+  :YYOB-CREATE-TIME: [2022-07-27 Wed 19:36]
+  :YYOB-ID: 1
+  :YYOB-MD5: c4ca4238a0b923820dcc509a6f75849b
+  :END:
+  百度，一个搜索引擎
+  ......
+#+END_SRC
+
+在上面的例子中， =:search:= 就是 tag， =:PROPERTIES:= 中的 =:ID:= 就是 attach 的 ID 值，用来索引保存的文件位置。 =:YYOB-CREATE-TIME:= 就是创建时间， =:END:= 后面的文本就是详细描述部分，这部分的内容就随意了。
+
+在正式开始编写之前，我先介绍 org 的几个 handy function，它们可以用来进行一些常用操作。
+
+[[https://www.reddit.com/r/orgmode/comments/923rql/how_to_recursively_search_orgmode_headers/][how to recursively search org-mode headers non-interactively?]]
+
+- =org-map-entries= 遍历文件中的所有标题
+- =org-heading-components= 获取标题的一些状态，具体内容可 =C-h f=
+- =org-entry-get= =org-entry-put= 获取和设置属性值
+- =org-map-tree= 遍历所有嵌套的标题
+
+** 实现与演示
+
+接下来就开始介绍我的具体实现思路和部分代码，我将它实现为一个 elisp 包，名字叫做 =yyorg-bookmark= ，链接放在本节的最后。首先从设计思路上来说吧。
+
+多亏了 emacs 28 的新特性 shorthands，写代码的时候可以少写很多包前缀。下面的代码的包前缀都使用 =t-= 而不是 =yyorg-bookmark-= ，emacs 在读取时会自动转换。
+
+*** 设计思路
+
+首先我们需要认识到，每个书签文件其实就是一个数据库，某种意义上来说我写的这个包就是个非常简陋的 DBMS。除数据外 DB 还要保存一些管理信息，如果我把这些变量放在包里面就会增加发生冲突的可能性（比如名字冲突等）。所以我将它们放在了书签文件中，将一些通用管理函数放在了 =yyorg-bookmark= 里。
+
+多亏了 org-mode 提供的文学编程功能，我可以在 org 文件中创建 elisp 代码块，并在文件载入 emacs 时运行以进行一些初始化操作。具体来说就像这样：
+
+- [[https://emacs.stackexchange.com/questions/12938/how-can-i-evaluate-elisp-in-an-orgmode-file-when-it-is-opened][How can I evaluate elisp in an orgmode file when it is opened?]]
+
+#+BEGIN_SRC text
+
+,#+NAME: startup
+,#+BEGIN_SRC emacs-lisp
+(your-code-here)
+,#+END_SRC
+
+...
+
+# Local Variables:
+# org-confirm-babel-evaluate: nil
+# eval: (progn (org-babel-goto-named-src-block "startup") (org-babel-execute-src-block) (outline-hide-sublevels 1))
+# End:
+#+END_SRC
+
+通过将变量使用 =setq-local= 设置就可设置 buffer 局部变量，这样就不容易引起 buffer 间冲突。同时代码块里也可以包含一些专用于 buffer 的管理函数，它们可以是 =yyorg-bookmark= 的函数的包装，或是自己定义的管理函数。
+
+我将上面这样的模块放入了一个模板文件中，并添加了一个叫做 =yyorg-bookmark-enchant= 的命令，使用该命令即可将模板文件附加到当前 buffer 末尾，这样完成了一个 =yyorg= 书签数据库的建立，完成了对 buffer 的“附魔”（笑）。
+
+分离带来好处的同时也带来一个问题，我要怎样才能访问 buffer 中的局部数据呢？可以通过将当前 buffer 切换至书签文件并使用 =symbol-value= 来获取。那要如何获取书签文件的 buffer 呢？好在 org-mode 提供了一个模板名与文件对应的关联表 =org-capture-templates= ，在进行内容捕获时，org-mode 根据它来选择对应的模板，并写入对应的文件。
+
+在书签文件载入时，书签文件需要将自己的模板添加到这个表中，这样就可以令 org-mode 在捕获内容时根据选择将内容输入到对应书签文件中。我们可以查询模板名来获取对应书签文件名。我编写了一些辅助函数，下面是一个比较好用的内部函数：
+
+- =(yyorg-bookmark--template-filename key)= ，根据 =org-capture-templates= 和模板名获取捕获的目标文件
+
+通过下面的代码即可获取和修改书签文件中的局部变量：
+
+#+BEGIN_SRC emacs-lisp
+  (defun t-get-local-value (key symbol)
+    "get buffer-local value in target file"
+    (let* ((filename (t--template-filename key))
+	   (buf (get-file-buffer filename)))
+      (save-current-buffer
+	(set-buffer buf)
+	(symbol-value symbol))))
+
+  (defun t-set-local-value (key symbol value)
+    "set buffer-local value in target file"
+    (let* ((filename (t--template-filename key))
+	   (buf (get-file-buffer filename)))
+      (save-current-buffer
+	(set-buffer buf)
+	(set symbol value))))
+#+END_SRC
+
+当然这也带来一个问题，代码变长了不少（毕竟是打洞做法......）
+
+*** 一些辅助函数
+
+在完成了最基本的分隔工作后就可以写一些包装函数了，这一部分是对 org-mode 部分函数的封装，让这些函数好用一些。
+
+首先是对 =org-capture-templates= 添加/删除的处理。它是我这个包里最重要的全局资源，用来关联模板和书签文件。为了避免出现一些低级错误，比如类型错误，模板错误等，需要对添加过程做一些检查。同时考虑到它的全局性，在添加同名模板时也要检查是否冲突，由用户来决定是否覆盖已存在的同名模板。
+
+我编写了 =yyorg-bookmark-add-template= 函数来添加模板，一个简单的例子如下，这是附魔文件里的例子模板：
+
+#+BEGIN_SRC emacs-lisp
+  (yyorg-bookmark-add-template
+   :key "l"
+   :desc "Add browser bookmark"
+   :type 'entry
+   :target `(file+headline ,(buffer-file-name) "Bookmarks")
+   :temp "* %c %^g\n:PROPERTIES:\n:YYOB-CREATE-TIME: %T\n:YYOB-ID: %(yyorg-bookmark-control-key-counter \"l\")\n:END:"
+   :props '(:prepend t)))
+#+END_SRC
+
+除了添加外也要考虑删除，我还编写了 =yyorg-bookmark-remove-template= 用于从 minibuffer 中选择并删除模板。
+
+#+BEGIN_SRC emacs-lisp
+(defun t-remove-template (key)
+  "remove a template from `org-capture-templates'
+use minibuffer to select a key"
+  (interactive (list (completing-read "key: " (t--template-keys)
+				      nil t)))
+  (setq org-capture-templates
+	(cl-delete-if (lambda (x) (string= key (car x)))
+		      org-capture-templates)))
+#+END_SRC
+
+再然后就是对属性值的操作，org-mode 提供了一些函数：
+
+- =org-entry-get= ，获取某一点所在 HEADLINE 的属性值
+- =org-entry-put= ，设置某一点所在 HEADLINE 的属性值
+- =org-find-entry= ，寻找第一个匹配的属性值，返回位置
+
+
+使用上面的三个函数，我编写了两个辅助函数，它们接受一个可选参数来判断自己是否在 HEADLINE 上，若是则直接使用当前位置，否则使用 =org-find-entry= 查找属性位置：
+
+#+BEGIN_SRC emacs-lisp
+(defun t--get-property (pname &optional on-headline)
+  "return string if found, or nil if not"
+  (let ((place (if on-headline (point)
+		 (org-find-property pname))))
+    (if place (org-entry-get place pname) nil)))
+
+(defun t--set-property (pname strval &optional on-headline)
+  "set property `pname' if found and return t, or nil if not
+if on-headline is set and point is on headline
+this function will always success"
+  (let ((place (if on-headline (point)
+		 (org-find-property pname))))
+    (if place (prog1 t (org-entry-put place pname strval)) nil)))
+#+END_SRC
+
+另外，由于 org-mode 中属性值都是以字符串保存的，如果要进行数学运算并不方便。我添加了一些计数器操作，可以较方便的对某个属性值进行自增和自减，最终的可用函数如下：
+
+#+BEGIN_SRC emacs-lisp
+(defun t-control-counter (pname op &optional on-headline)
+  "control counter's value
+'+ is add1, '- is sub1, 'r is reset to 0, 'z is unchange
+return the origin value"
+  (cl-case op
+    ((+) (t-increase-counter pname on-headline))
+    ((-) (t-decrease-counter pname on-headline))
+    ((r) (t-reset-counter pname on-headline))
+    ((z) (t--get-property pname on-headline))
+    (t (error "unrecognized op %s" op))))
+#+END_SRC
+
+最后是对标题属性值的枚举，可以获取所有 HEADLINE 的属性值，这个函数可配合 emacs 的 =narrow= 功能实现区域枚举。
+
+#+BEGIN_SRC emacs-lisp
+(defun t-get-all-entries-properties (pnames)
+  "get all entries specific property
+return form is ( ((p1 . v1) (p2 . v2) ...) ... )
+in other words, return value is a nested alist
+you can use it with narrow"
+  (let ((pro-list))
+    (org-map-tree
+     (lambda ()
+       (let ((a (org-entry-properties))
+	     (b))
+	 (mapc (lambda (x) (let ((c (assoc x a)))
+			     (when c (push c b))))
+	       pnames)
+	 (when b (push b pro-list)))))
+    (reverse pro-list)))
+#+END_SRC 
+
+上面这些函数基本上就是 =yyorg-bookmark.el= 文件中实现的功能了，接下来我们来到附魔模板的代码编写，来实现一些更加贴近用户的操作。
+
+*** 获取书签
+
+首先从获取书签的功能开始。最直接也最费劲的方法是手动添加，这里就不提了，我们来写个 capture template 吧，文档在这：[[https://orgmode.org/manual/Capture-templates.html][Capture templates]]。拿我在上面写的模板做使用例，考虑到现在还没有使用 =yyorg-bookmark= ，这里不使用 =yyorg-bookmark-add-template= 函数：
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-capture-templates
+	       `("l" "Add browser bookmark" entry
+		 (file+headline ,(buffer-file-name) "Bookmarks")
+		 "* %c\n:PROPERTIES:\n:TIME: %T\n:END:"
+		 :prepend t))
+#+END_SRC
+
+上面这段代码的作用是将模板 ="l"= 添加到 =org-capture-templates= 中。这里目标选择当前 buffer 对应文件，HEADLINE 选择 Bookmark，属性选择 =:prepent t= ，这表示将新的项添加到最前。完整版的例子在代码仓库的附魔模板文件中。
+
+我们可以体验一下这段代码的效果，按下 =M-x org-capture= ，然后选中 =l= ，你可以看到剪切板中的内容被放到了添加项的标题中， =TIME= 属性值成为了当前时间。接着按下 =C-c C-c= 完成捕获。动图如下所示：
+
+| [[./13.gif]] |
+
+可见，在我复制 "Hello world" 并调用 =org-capture= 后，"Hello world" 出现在了标题位置，这是 =%c= 的作用，其他的特殊符号可参考官方文档。
+
+使用这个简单的模板已经可以实现收集书签了，工作流大概是：在浏览器中复制链接，在 emacs 中完成捕获动作，在浏览器复制标题，在 emacs 中添加标题，完成。但这显然是不够快捷的，这样得往返浏览器两次，最好是点一下就能存上。
+
+这里有篇使用 applescript [[https://zhuanlan.zhihu.com/p/450140587][拷贝浏览器链接到 org-mode]] 的文章，这样做就不用跑两趟了。不过他这还是要手动 =org-capture= ，更要命的是我从来不用苹果的笔记本电脑。
+
+好在有更好的解决方案，它就是 =org-protocol= 。
+
+*** 一键获取
+
+就像我在上面说的，存书签最好是点一下就好，而 emacs 正巧也有相应的解决方案。熟悉 emacs 的你应该知道 emacs 有个 emacsclient，如果 emacs 启动了 server，那么可用 =emacsclient file= 命令在已启动的 emacs 中打开文件，这样就不会有多个 emacs 实例了，再也不用担心 emacs 启动太慢了（笑）。
+
+org-protocol hack 了 emacsclient，除了传递文件名给 emacsclient 外，还可以传字符串过去，org-protocol 会检查字符串中有没有已经注册的协议，如果有的话它会将字符串的内容交给对应程序处理。换句话说，只消使用适当的字符串在 emacs 外面调用 emacsclient，emacs 就能做出相应的动作。
+
+你可以使用以下代码启动 emacs server：
+
+#+BEGIN_SRC emacs-lisp
+(require 'server)
+(unless (eq (server-running-p) t)
+  (server-start))
+#+END_SRC
+
+org-protocol 默认支持三种协议，我们要使用的那一种是 =capture= ，传递给 emacsclient 的字符串是这样的一个格式：
+
+#+BEGIN_SRC html
+emacsclient "org-protocol://capture?template=X&url=URL&title=TITLE&body=BODY"
+#+END_SRC
+
+调用 emacsclient 后， =org-capture= 会使用模板 =X= 来处理捕获内容，并完成捕获。可以看到上面的内容包括三个部分，分别是 url，标题和内容，使用文档中的对应的特殊符号即可在 =org-capture= 模板中获取这些字符串。通过设置一些选项， =org-capture= 可以不需要 =C-c C-c= 确认而直接完成捕获过程，这样就可以一键捕获了。
+
+那么，我们要如何在浏览器中调用 emacsclient 呢？可以参考 [[https://orgmode.org/worg/org-contrib/org-protocol.html][Intercept calls from emacsclient to trigger custom actions]] 。如果你和我一样使用 Windows，那只需运行下面的 reg 脚本即可（或者自己在 regedit 中添加）：
+
+#+BEGIN_SRC conf
+REGEDIT4
+; see https://orgmode.org/worg/org-contrib/org-protocol.html
+; and https://github.com/sprig/org-capture-extension
+
+[HKEY_CLASSES_ROOT\org-protocol]
+@="URL:Org Protocol"
+"URL Protocol"=""
+[HKEY_CLASSES_ROOT\org-protocol\shell]
+[HKEY_CLASSES_ROOT\org-protocol\shell\open]
+[HKEY_CLASSES_ROOT\org-protocol\shell\open\command]
+
+; use you own path to emacsclientw.exe
+@="\"path\\to\\your\\emacs\\bin\\emacsclientw.exe" \"%1\""
+#+END_SRC
+
+具体原理可以参考 [[https://www.zhihu.com/question/410173377/answer/1366638756][“有个网站想打开此应用”原理是什么？]]，这里直接摘过来了：
+
+#+BEGIN_QUOTE
+作者：Hawaii
+
+链接：https://www.zhihu.com/question/410173377/answer/1366638756
+
+来源：知乎
+
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+1. 浏览器解析URL，得到协议部分thunder://
+2. 浏览器尝试在已知的协议列表中匹配thunder协议
+3. thunder不是已知协议，浏览器转而在注册表中查找thunder协议的注册信息，也即HKEY_CLASSES_ROOT/thunder这个键
+4. 浏览器使用这个键下的Shell/Open/command子键的值作为运行此协议的程序路径，并将URL的路径部分作为程序的参数
+5. 浏览器弹出提示框“有个网站想打开此应用”，询问用户是否要执行此协议关联的程序。
+#+END_QUOTE
+
+在添加相应的注册表项后，当你在浏览器地址栏中输入类似 =org-protocol://capture?template=l&url=baidu.com&title=百度一下你就知道&body=hello= 的 url 时，浏览器就会提示你是否运行 emacsclient，点击运行即可执行捕获动作。
+
+现在还剩最后一步，那就是一个能够获取网页信息和发送数据的按钮，使用简单的 JS 代码即可获取协议所需的信息并发送：
+
+#+BEGIN_SRC javascript
+  location.href = 'org-protocol://capture?template=' + key +
+      '&url=' + encodeURIComponent(location.href) +
+      '&title=' + encodeURIComponent(document.title) +
+      '&body=' + encodeURIComponent(window.getSelection());
+
+  // use this for bookmark
+  javascript:location.href='org-protocol://capture?template='+'yyobp'+'&url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)+'&body='+encodeURIComponent(window.getSelection());
+#+END_SRC
+
+在一些浏览器中你可以将那一长条代码放到书签地址中，然后点击书签即可实现捕获。我在 firefox 和 edge 上进行了尝试，firefox 可行但 edge 不可行。edge 不允许从书签处执行 JS 代码。使用书签不能适用于所有浏览器。下图是 firefox 的编辑书签对话框：
+
+| [[./14.PNG]] |
+
+既然书签不行那可以使用浏览器插件，在 firefox 上有个叫做 =org-capture= 的[[https://addons.mozilla.org/zh-CN/firefox/addon/org-capture/?utm_source=addons.mozilla.org&utm_medium=referral&utm_content=search][插件]]，[[https://github.com/sprig/org-capture-extension][这里]]是源代码及文档。按照它的说明配置好 emacs 后，点击浏览器插件的那个马头（还是独角兽？）就可以一键保存了。很可惜这个插件在 edge 上并没有。
+
+最后我想到了使用油猴脚本，油猴在许多浏览器上都可用（我就用 edge 和 firefox），脚本编写也比较容易。通过它实现一键保存对我来说是最可行的方案了。下面给出我的油猴脚本和效果截图：
+
+#+BEGIN_SRC javascript
+// ==UserScript==
+// @name        yyob-add-bookmark
+// @namespace   http://tampermonkey.net/
+// @version     0.1
+// @description use org-protocol and tm-script to add bookmark
+// @author      include-yy
+// @match       *://*/*
+// @grant       unsafeWindow
+// @grant       GM_registerMenuCommand
+// ==/UserScript==
+
+(function() {
+    'use strict'; // Your code here...
+
+    // all templates
+    // [key, description, accesskey]
+    // comment or uncomment to add/remove item
+    let all = [
+        ['yyobp', 'Add Bookmark', 'a'],
+	['L', 'add bk 2', 'p']
+    ];
+
+    let i = 0;
+    // https://stackoverflow.com/questions/25750183/how-to-create-a-toolbar-button-for-a-chrome-tampermonkey-user-script
+    // how to add MenuCommand
+    for (i = 0; i < all.length; i++)
+    {
+        let name = all[i][0];
+        let desc = all[i][1];
+        let hotkey = all[i][2];
+        GM_registerMenuCommand(desc, function() {
+            main(name);
+        }, hotkey);
+    }
+    // https://github.com/toure00/org-capture-tag-bookmark
+    // how to capture link and description
+    function main (key) {
+        location.href = 'org-protocol://capture?template=' + key +
+            '&url=' + encodeURIComponent(location.href) +
+            '&title=' + encodeURIComponent(document.title) +
+	    '&body=' + encodeURIComponent(window.getSelection());
+    }
+
+    // my original thought was to use radio/checkbox dialog to add or remove template to use
+    // but I found it easier to just add/remove a list in a list variable :p
+    // if you want to do like this, you can refer to
+    // https://stackoverflow.com/questions/11668111/how-do-i-pop-up-a-custom-form-dialog-in-a-greasemonkey-script
+    // and https://github.com/toure00/org-capture-tag-bookmark
+    // if you want to use jQuery, just paste blow line to the ==userscript== block
+    // @require     https://code.jquery.com/jquery-2.1.4.min.js
+})();
+#+END_SRC
+
+| [[./15.PNG]] |
+
+最后让我们来看看捕获展示：
+
+| [[./16.gif]] |
+
+下面是上面演示中使用的捕获模板， =template= 部分看着非常别扭，下面会解释原因：
+
+#+BEGIN_SRC emacs-lisp
+    (yyorg-bookmark-add-template
+     :key "yyobp"
+     :desc "Add browser bookmark"
+     :type 'entry
+     :target `(file+headline ,(buffer-file-name) "Bookmarks")
+     :temp "* [[%:link][%:description]] %(yyorg-bookmark-add-repeat-tag (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable) 'gethash)\n:PROPERTIES:\n:YYOB-ID: %(if (string= (yyorg-bookmark-add-repeat-tag (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable) 'gethash) \"\") (progn (puthash (md5 \"%:link\") (yyorg-bookmark-control-key-counter \"yyobp\" 'z) (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable)) (yyorg-bookmark-control-key-counter \"yyobp\")) (gethash (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable)))\n:YYOB-CREATE-TIME: %T\n:YYOB-MD5: %(md5 \"%:link\")\n:END:%(if (string= \"\" \"%i\") \"\" \"\n%i\")"
+     :props '(:prepend t :immediate-finish t :jump-to-captured t)))
+#+END_SRC
+
+这一部分我参考的资料有很多：
+
+- [[https://emacs-china.org/t/topic/5494][从浏览器一键保存书签到 Org Mode]]
+- [[https://emacs-china.org/t/org-mode/8189][用org-mode做网页书签的可以进来看一下]]
+- [[https://emacs-china.org/t/org-protocol/8684][什么样才是正确的org-protocol姿势]]
+- [[https://github.com/sprig/org-capture-extension][org-capture-extension -- github]]
+- [[https://github.com/toure00/org-capture-tag-bookmark][org-capture-tag-bookmark -- github]]
+- [[https://github.com/alphapapa/org-protocol-capture-html#org-protocol-instructions][org-protocol-capture-html -- github]]
+- [[https://github.com/Malabarba/org-agenda-property][Propertize your org-agenda -- github]]
+- [[https://github.com/p-kolacz/org-linkz][org-linkz -- github]]
+- [[https://github.com/alphapapa/org-web-tools][org-web-tools -- github]]
+
+*** 添加和删除
+
+通过上面的一些操作我们实现了从浏览器直接发送书签到 emacs，接下来要考虑的是添加和删除的问题。如果仅仅是文本的添加和删除的话这一节是不必要的，添加可通过手动添加或 org-protocol 获取，而删除可直接调用 =org-cut-subtree= （ =C-c C-x C-w= ）来删除整一个书签的内容。
+
+*对添加和删除的管理是为了更好的去重* 。在我的实现中，可以使用局部快捷键 =C-c k= 来删除书签，使用 =C-c i= 来添加书签（信息）。与普通的文本操作不同，这两个操作会修改一些管理信息。
+
+在我的捕获模板中，创建 entry 时除了创建时间外，每个书签的属性还包括书签的 ID 和 url 的 MD5 值。ID 是由全局计数器分配的，每添加一个 *新的* url 就会使计数器自增 1，使得每个 url 的 ID 值都是唯一的。url ID 唯一但书签并不唯一。上面那一团乱麻似的模板就是为了实现获取书签时检查是否已存在 url。在捕获新项时，若 url 已存在则使用已存在书签的 ID，不自增计数器，若不存在则使用计数器值并自增计数器。
+
+我使用了一个局部哈希表来存储当前书签的 MD5 和 ID，它用来检查某个 url 的 MD5 是否已存在。在获取书签时模板代码会根据书签是否已存在判断是否更新哈希表。若书签 url 已存在，书签还会在标题打上 =:repeat:= tag。
+
+在删除书签时，我们同样需要对哈希表进行维护。如果删除的项是唯一的项，那就需要在哈希表中删除 MD5-ID 键值对。如果不唯一则无需修改哈希表。我将完成这个工作的函数绑定到了 =C-c k= 上。与之相反， =C-c i= 的作用是将项的 *信息* 添加到哈希表中，若信息已存在则不进行操作。
+
+假设我们使用 =C-c k= 删除了某书签，但是我们又想让它恢复到没有删除之前的状态，那可以 =C-/= （undo）然后使用 =C-c i= 将书签信息重新添加到哈希表中。
+
+方便起见，我还添加了 =C-c r= 快捷键，它根据当前的书签项来刷新哈希表，你可以多次删除多个书签后直接使用它，而不需要使用多次 =C-c k= 。
+
+这一部分的代码实现主要在附魔模板中，因为使用了局部变量所以访问起来有点麻烦，代码形状有些奇怪。在之后的版本中我可能会使用宏来简化一部分操作。
+
+*** tag
+
+我没有在模板中使用添加 tag 的功能（ =%^g= ），添加 tag 可将光标移至 headline 处并按下 =C-c C-c= ，然后 emacs 会提提供一些已存在的 tag 供你选择。这些没什么好说的，下面参考[[https://orgmode.org/org.html#Tag-Hierarchy][官方文档]]简单提一下嵌套 tag 的写法。
+
+在文件开头添加下面的 tag 头，可以得到下面的嵌套格式：
+
+#+BEGIN_SRC text
+# 注意空格，所有的空格都是必要的
+,#+TAGS: [ GTD : Control Persp ]
+,#+TAGS: [ Control : Context Task ]
+,#+TAGS: [ Persp : Vision Goal AOF Project ]
+#+END_SRC
+
+- ‘GTD’
+  - ‘Persp’
+    - ‘Vision’
+    - ‘Goal’
+    - ‘AOF’
+    - ‘Project’
+- ‘Control’
+  - ‘Context’
+  - ‘Task’
+
+
+有人使用油猴[[https://github.com/toure00/org-capture-tag-bookmark][实现]]了在浏览器内添加 tag 的功能，不过感觉有点麻烦，可能只能用于一些常用 tag（不过这也够了），所以我就没有实现。
+
+*** 下载网页
+
+org-mode 提供了一个叫做 [[https://orgmode.org/org.html#Capture-and-Attachments][attach]] 的功能，可以将一些文件与标题关联起来。使用 =C-c C-a a= 添加文件后 org-mode 会给标题分配一个唯一的 ID，以及和 ID 关联的文件夹，附加的文件默认会复制到该文件夹内。使用 =C-c C-a o= 可打开文件夹内某一文件，使用 =C-c C-a f= 可在 emacs 中打开该文件目录。
+
+两年前我首次读 manual 时对这个功能不以为意，现在一看，这功能太适合存储下载下来的网页了。使用 wget 等命令行工具很容易实现一键下载网页的功能。它的实现非常简单：
+
+#+BEGIN_SRC emacs-lisp
+  (defun t-get-url-from-link (str)
+    "get link from [[link][description]]" 
+    (cl-assert (string= (substring str 0 2) "[["))
+    (let ((i 0))
+      (while (and (not (= (aref str i) ?\]))
+		  (< i (length str)))
+	(cl-incf i))
+      (if (= i (length str)) (error "link not found")
+	(substring str 2 i))))
+
+  ;; https://stackoverflow.com/questions/13505113/how-to-open-the-native-cmd-exe-window-in-emacs
+  ;; https://www.tecmint.com/wget-download-file-to-specific-directory/
+  ;; https://www.anycodings.com/1questions/2463613/is-it-possible-for-wget-to-flatten-the-result-directories
+  (defun t-attach-use-wget (link)
+    "-E -H -k -K -p -nd -e robots=off
+    -P target-directory
+    used only on windows
+    just to modify cmd to bash and something else to adapt to linux or use advice"
+    (let* ((dir-path (org-attach-dir-get-create))
+	   (wget-exe (or t-wget-path "wget")))
+      (let ((proc (start-process "yyob-wget" nil
+				 "cmd.exe" "/C" "start" "cmd.exe"
+				 "/K"
+				 wget-exe "-E" "-k" "-K" "-p"
+				 "-nd" "-e" "robots=off"
+				 link
+				 "-P" dir-path)))
+	(set-process-query-on-exit-flag proc nil))))
+#+END_SRC
+
+在 windows 上使用需要配置 =yyorg-wget-path= 为 =wget= 的绝对路径，不过由于我现在懒得弄 linux，我也没有写使用 bash 的 linux 版本，我将下载键绑定在了 =C-c u= 上。org-attach 提供的默认下载功能太弱，不建议使用。
+
+这里我使用 cmd 创建了可见的 cmd 窗口，而不是在 emacs 中使用 buffer 显示输出，我发现乱码问题似乎很难解决。下面的一些文章或帖子可能对你在乱码问题上有所帮助：
+
+- [[https://emacs-china.org/t/cmdproxy-process-coding-system-alist-utf-8/9836/][cmdproxy 的 process-coding-system-alist 似乎应该改成 utf-8 了?]]
+- [[https://chriszheng.science/2015/09/24/Prefer-UTF-8-in-MS-Windows/][在MS-Windows平台下使用UTF-8编码]]
+- [[https://emacs-china.org/t/counsel-locate-windows-10/14270][counsel-locate 在windows 10上面乱码]]
+- [[https://emacs-china.org/t/windows-shell-command-encoding/21028][记录一次 折腾 Windows 下 Shell Command encoding 的问题]]
+
+*** 查找
+
+org-agenda 提供了非常好的聚合搜索功能，它可以一次性搜索多个文件，不过你需要通过 =C-c [= 把 buffer 加入到它的搜索列表中，如果想要移除某 buffer 就在该 buffer 中按下 =C-c ]= 。使用 =M-x org-agenda= 即可进入搜索选择界面，它提供了非常多的选择，org-mode 建议将该命令绑定到 =C-c a= 上：
+
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (bkd "C-c a") 'org-agenda)
+#+END_SRC
+
+我在书签文件中添加了局部快捷键 =C-c m= ，它可以直接清空 org-agenda 使用的文件表，这样就不用一个一个 =C-c ]= 了。
+
+下面是 agenda 搜索选择界面：
+
+| [[./17.PNG]] |
+
+org-agenda 提供的搜索功能包括但不限于：
+
+- =t= 列出所有的 =TODO= 项， =T= 列出带有特殊 =TODO= 标志的项
+- =m= 搜索 tag/prop/todo， =M= 只对 =TODO= 项进行搜索
+- =s= 关键词搜索， =S= 只对 =TODO= 项进行搜索
+- =/= 使用多 buffer =occur= 进行搜索
+- =?= 找到带有 =:FLAGGED:= tag 的项
+- =#= 列出所有阻塞的项目
+
+和时间管理相关的功能我不是很熟悉，这里就不进一步展开了。
+
+可以参考 [[https://orgmode.org/worg/org-tutorials/advanced-searching.html][Advanced searching]] 学习 org-agenda 搜索技巧。

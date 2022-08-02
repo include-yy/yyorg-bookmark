@@ -249,6 +249,10 @@ otherwise a null string \"\""
     (if (= i (length str)) (error "link not found")
       (substring str 2 i))))
 
+;; https://stackoverflow.com/questions/13505113/how-to-open-the-native-cmd-exe-window-in-emacs
+;; https://www.tecmint.com/wget-download-file-to-specific-directory/
+;; https://www.anycodings.com/1questions/2463613/is-it-possible-for-wget-to-flatten-the-result-directories
+
 (defun t-attach-use-wget (link)
   "-E -H -k -K -p -nd -e robots=off
 -P target-directory
