@@ -1,6 +1,8 @@
 yyorg-bookmark 基于 org-mode 的书签管理插件
 ======
 
+![load faied](./capture.PNG)
+
 ## 相关项目
 
 - [org-capture-extension](https://github.com/sprig/org-capture-extension)
@@ -76,8 +78,6 @@ let all = [
 通过 org-mode 的文学编程功能，可以在 org 文件中写入管理代码，使用 elisp 局部变量管理书签文件的有关信息。在文件被打开时可以执行初始化代码，为每个书签文件提供私有的管理信息。
 
 使用 `org-capture-templates` 中的文件名信息可将模板与目标文件相关联，这就允许书签文件中的局部代码通过全局变量 `org-capture-templates` 来找到自己所在 buffer，从而获取 buffer-local 信息。
-
-## 详细说明
 
 [详细介绍](./article/index.org)
 
