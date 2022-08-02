@@ -1,6 +1,7 @@
 ;;; yy-org-bookmark.el yy's bookmark manage tool -*- lexical-binding: t -*-
 
 (require 'cl-lib)
+(require 'server)
 
 (require 'org)
 (require 'org-capture)
@@ -280,6 +281,10 @@ headline's item must be the form of [[link][desc]] ...."
     (unless (member "ATTACH" tags)
       (org-set-tags (cons "ATTACH" tags)))
     (t-attach-use-wget link)))
+
+;; start server if not start
+(unless (eq (server-running-p) t)
+  (server-start))
 
 (provide 'yyorg-bookmark)
 
