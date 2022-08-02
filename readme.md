@@ -1,4 +1,4 @@
-yyorg-bookmark 基于 org-mode 的书签管理插件
+yyorg-bookmark —— 基于 org-mode 的书签管理插件
 ======
 
 ![load faied](./capture.PNG)
@@ -72,6 +72,8 @@ let all = [
 ```
 
 书签文件在添加 `enchant.org` 文件内容后会有 `YYOB-MANAGEMENT` 标题，管理代码位于其中，可直接修改代码来启动/关闭功能，或添加自己需要的功能，比如快捷键。
+
+**注意：请确保多个书签文件中的 capture 模板名各不相同，否则会引起冲突**
 
 ## 实现原理简述
 
