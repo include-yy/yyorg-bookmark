@@ -10,7 +10,7 @@
 
 (defvar t-headline "YYOB-MANAGEMENT"
   "enchant file's 1st headline's name")
-(defvar t-enchant-file (expand-file-name "./enchant.org")
+(defvar t-enchant-file (concat (file-name-directory load-file-name) "enchant.org")
   "default enchant file for file variable initialize")
 (defvar t-global-counter-name "YYOB-COUNTER"
   "name of enchant file's global counter")
