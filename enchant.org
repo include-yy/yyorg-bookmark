@@ -91,6 +91,8 @@
 		   (interactive)
 		   (setq org-agenda-files nil)
 		   (message "clear org agenda files")))
+
+  (local-set-key (kbd "C-c s") 'yyorg-bookmark-restart-server)
 #+END_SRC
 
 # Local Variables:

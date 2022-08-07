@@ -286,6 +286,19 @@ headline's item must be the form of [[link][desc]] ...."
 (unless (eq (server-running-p) t)
   (server-start))
 
+;; restart server function
+;; sometimes emacsclient doesn't work due to some unknown problems
+;; so let's just shutdown it and restart
+(defun t-restart-server ()
+  "restart emacs server unconditionally"
+  (interactive)
+  (if (not (eq (server-running-p) t)) ; server not run
+      (progn (server-start)
+	     (message "emacs server starts now"))
+    (server-force-stop)
+    (server-start)
+    (message "emacs server restarts now")))
+
 (provide 'yyorg-bookmark)
 
 ;; Local Variables:
