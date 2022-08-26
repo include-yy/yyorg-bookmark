@@ -332,6 +332,34 @@ headline's item must be the form of [[link][desc]] ...."
     (server-start)
     (message "emacs server restarts now")))
 
+;; buffer-local keymap use minor-mode
+;; example: add keys for forward and backward
+;; (yyorg-bookmark-gen-keymap-minor-mode yyyy nil
+;;    ("C-c C-c n" . 'forward-char)
+;;    ("C-c C-c p" . 'backward-char))
+(defmacro t-gen-keymap-minor-mode (keyname amap &rest keys-pair)
+  "use `keyname' as minor-mode's name, k means yyob-k-mode, etc.
+please use it after anything key binding you need have appeared
+if amap is not nil, combine it with keymap created by this macro
+amap must be nil or a symbol containing keymap"
+  (declare (indent defun))
+  (let* ((map-name (gensym))
+	 (minor-mode-name (intern (concat "yyob-"
+					  (symbol-name keyname)
+					  "-mode")))
+	 (keys-form (mapcar (lambda (x)
+			      `(define-key ,map-name (kbd ,(car x)) ,(cdr x)))
+			    keys-pair)))
+    `(let ((,map-name (make-sparse-keymap)))
+       ,@keys-form
+       ,(when amap `(setq ,map-name
+			  (make-composed-keymap (list ,map-name ,amap))))
+       (define-minor-mode ,minor-mode-name
+	 ,(concat "yyorg-bookamrk's buffer local minor mode keymap: "
+		  (symbol-name minor-mode-name))
+	 :keymap ,map-name)
+       (,minor-mode-name 1))))
+
 (provide 'yyorg-bookmark)
 
 ;;; yyorg-bookmark.el ends here
