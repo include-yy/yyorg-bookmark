@@ -1,4 +1,8 @@
-;;; yy-org-bookmark.el yy's bookmark manage tool -*- lexical-binding: t -*-
+;;; yyorg-bookmark.el --- yy's bookmark manage tool -*- lexical-binding: t -*-
+
+;;; Commentary:
+
+;;; Code:
 
 (require 'cl-lib)
 (require 'server)
@@ -8,12 +12,23 @@
 (require 'org-protocol)
 (require 'org-attach)
 
+;; basic options: some infomation about enchant file
 (defvar t-headline "YYOB-MANAGEMENT"
-  "enchant file's 1st headline's name")
-(defvar t-enchant-file (concat (file-name-directory load-file-name) "enchant.org")
-  "default enchant file for file variable initialize")
+  "enchant file's manage headline's name")
 (defvar t-global-counter-name "YYOB-COUNTER"
   "name of enchant file's global counter")
+(defvar t-enchant-name "enchant.org"
+  "enchant file's name")
+(defvar t-enchant-file
+  (if load-in-progress
+      (concat (file-name-directory load-file-name) t-enchant-name)
+    (expand-file-name t-enchant-name))
+  "the full path of enchant file.
+if use `require', then use load-file-name's directory.
+else use current buffer's path")
+;; make sure enchant file's existance
+(cl-assert (file-exists-p t-enchant-file))
+
 (defvar t-wget-path nil
   "the file path of wget.exe
 wget is a free software package for retrieving files using HTTP, HTTPS, FTP and FTPS")
@@ -48,7 +63,7 @@ props is the properties plist"
   (let ((item (cl-find-if (lambda (x) (string= key (car x)))
 			  org-capture-templates)))
     (cond
-     ((not item) 
+     ((not item)
       (add-to-list 'org-capture-templates
 		   `(,key ,desc ,type ,target ,temp ,@props))
       (message "add new template item %s" key))
@@ -92,6 +107,9 @@ if tplist is not provided, use org-capture-templates"
       (let ((target (cadddr tp)))
 	(t--target-filename target)))))
 
+;; unused function
+;; maybe useful after capture and before C-c C-c, but I think it is useless
+;; reserve just because I'm lazy
 (defun t--current-target-filename ()
   "get current target's filename
 use the plist `org-capture-current-plist'"
@@ -134,7 +152,7 @@ this function will always success"
     (value pname &optional on-headline)
   `(t--set-property ,pname ,value ,on-headline))
 
-
+;; str incf operator
 (defmacro t--incfstr (place &optional n)
   "string version of cl-incf"
   (gv-letplace (ge se) place
@@ -182,12 +200,14 @@ return the origin value"
     (t-control-counter t-global-counter-name op)))
 
 (defun t-control-key-counter (key &optional op)
-  "used in capture template"
+  "used in capture template
+use key in org-capture-template to locate file"
   (let* ((filename (t--template-filename key))
 	 (buf (get-file-buffer filename)))
     (with-current-buffer buf
       (t-control-global-counter op))))
 
+;; properties opeartions
 (defun t-get-all-entries-properties (pnames)
   "get all entries specific property
 return form is ( ((p1 . v1) (p2 . v2) ...) ... )
@@ -214,6 +234,7 @@ you can use it with narrow"
 	  (org-narrow-to-subtree)
 	  (yyorg-bookmark-get-all-entries-properties pnames))))))
 
+;; buffer-local variables operations
 (defun t-get-local-value (key symbol)
   "get buffer-local value in target file"
   (let* ((filename (t--template-filename key))
@@ -234,6 +255,16 @@ you can use it with narrow"
 (gv-define-setter t-get-local-value (value key symbol)
   `(t-set-local-value ,key ,symbol ,value))
 
+;; macro for doing sth on target buffer's context
+(defmacro t-with-current-key-buffer (key &rest body)
+  "use key's file as current buffer
+and do something, return the last expression's value"
+  `(with-current-buffer (get-file-buffer (t--template-filename ,key))
+     ,@body))
+
+;; download related operations
+
+;; used for tag repeated items
 (defun t-add-repeat-tag (key table lookfn)
   "return \":repeat:\" if key is in table
 otherwise a null string \"\""
@@ -241,7 +272,7 @@ otherwise a null string \"\""
     (if (null res) "" ":repeat:")))
 
 (defun t-get-url-from-link (str)
-  "get link from [[link][description]]" 
+  "get link from [[link][description]]"
   (cl-assert (string= (substring str 0 2) "[["))
   (let ((i 0))
     (while (and (not (= (aref str i) ?\]))
@@ -282,6 +313,8 @@ headline's item must be the form of [[link][desc]] ...."
       (org-set-tags (cons "ATTACH" tags)))
     (t-attach-use-wget link)))
 
+;; emacsclient server operations
+
 ;; start server if not start
 (unless (eq (server-running-p) t)
   (server-start))
@@ -300,6 +333,8 @@ headline's item must be the form of [[link][desc]] ...."
     (message "emacs server restarts now")))
 
 (provide 'yyorg-bookmark)
+
+;;; yyorg-bookmark.el ends here
 
 ;; Local Variables:
 ;; read-symbol-shorthands: (("t-" . "yyorg-bookmark-"))
