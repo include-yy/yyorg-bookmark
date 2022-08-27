@@ -360,6 +360,71 @@ amap must be nil or a symbol containing keymap"
 	 :keymap ,map-name)
        (,minor-mode-name 1))))
 
+;; operations about repeated item detection
+(defmacro t-gen-create-hashtable (hashname keyname value-or-name headline-name)
+  "generate function that produces hashtable
+if value-or-name is a string, then use headline's `string' property as value
+else use a one length list's fst element as value"
+  (cl-assert (symbolp hashname))
+  (cl-assert (stringp keyname))
+  (cl-assert (or (stringp value-or-name)
+		 (and (listp value-or-name)
+		      (= (length value-or-name) 1))))
+  (cl-assert (or (stringp headline-name) (symbolp headline-name)))
+  (let ((pros (if (stringp value-or-name)
+		  (list keyname value-or-name)
+		(list keyname)))
+	(key-part (if (stringp value-or-name)
+		      `(cdr (assoc ,value-or-name x))
+		    (car value-or-name))))
+    `(lambda ()
+       (setq-local ,hashname (make-hash-table :test 'equal))
+       (let* ((pro-list (t-get-all-entries-properties-under-headline
+			 ',pros ,headline-name)))
+	 (mapc (lambda (x) (puthash (cdr (assoc ,keyname x))
+				    ,key-part
+				    ,hashname))
+	       pro-list)))))
+
+(defmacro t-gen-remove-hashtable (hashname keyname &optional m1 m2)
+  "generate a remhash function for local hashtable
+it kill the subtree at the same time
+m1 is a string used for another same key item exists in file
+m2 is a string used for no other same key item exists"
+  `(lambda ()
+     (let ((h-key (t--get-property ,keyname t)))
+       (org-cut-subtree)
+       (if (org-find-property ,keyname h-key)
+	   (message ,(or m1 "one item is killed"))
+	 (progn (remhash h-key ,hashname)
+		(message ,(or m2 "last item is killed")))))))
+
+(defmacro t-gen-insert-hashtable (hashname keyname name-or-value &optional m1 m2)
+  "generate a addhash function for local hashtable
+do nothing other than just adding current item's info to hashtable
+`name-or-value' is similar to gen-create-hashtable
+it is similar to gen-remove-hashtable"
+  (let ((h-value (if (stringp name-or-value)
+		     `(t--get-property ,name-or-value t)
+		   (car name-or-value))))
+    `(lambda ()
+       (let* ((h-key (t--get-property ,keyname t))
+	      (h-val ,h-value))
+	 (if (gethash h-key ,hashname)
+	     (message ,(or m1 "this item already in hashtable"))
+	   (progn
+	     (puthash h-key h-val ,hashname)
+	     (message ,(or m2 "add a new item to hashtalbe"))))))))
+
+(defmacro t-gen-command-with-message (func valuep str)
+  "generate a (interactive) function that can be used by keymap
+str is a string echoed in message line after command execution"
+  (cl-assert (stringp str))
+  `(lambda ()
+     (interactive)
+     ,(if valuep `(funcall ,func) `(funcall ',func))
+     (message ,str)))
+
 (provide 'yyorg-bookmark)
 
 ;;; yyorg-bookmark.el ends here
