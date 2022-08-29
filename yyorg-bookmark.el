@@ -12,6 +12,8 @@
 (require 'org-protocol)
 (require 'org-attach)
 
+(require 'skeleton)
+
 ;; basic options: some infomation about enchant file
 (defvar t-headline "YYOB-MANAGEMENT"
   "enchant file's manage headline's name")
@@ -350,6 +352,7 @@ amap must be nil or a symbol containing keymap"
 	 (keys-form (mapcar (lambda (x)
 			      `(define-key ,map-name (kbd ,(car x)) ,(cdr x)))
 			    keys-pair)))
+    (cl-assert (not (boundp minor-mode-name)))
     `(let ((,map-name (make-sparse-keymap)))
        ,@keys-form
        ,(when amap `(setq ,map-name
@@ -424,6 +427,61 @@ str is a string echoed in message line after command execution"
      (interactive)
      ,(if valuep `(funcall ,func) `(funcall ',func))
      (message ,str)))
+
+;; use skeleton to generate template
+(defun t--sexp2string (s) (format "%S" s))
+
+(defmacro t--letf (bindings &rest body)
+  "bind val and function to symbol
+use 'val for variable and fun for function
+for example
+(t--letf
+  ((a '1+)
+   ('b 1))
+  (a b))
+the result is 2"
+  (declare (indent defun))
+  (let ((new-bind
+	 (mapcar (lambda (x) (if (not (consp (car x)))
+				 (cons `(symbol-function ',(car x))
+				       (cdr x))
+			       (cons `(symbol-value ,(car x))
+				     (cdr x))))
+		 bindings)))
+    `(letf ,new-bind
+       ,@body)))
+
+(defmacro t-gen-capture-template (bindings &rest skeleton)
+  "generate capture template.
+`skeleton' is a list of ELEMENTS, you don't need to add `INTERACTOR'"
+  `(t--letf ,bindings
+     (with-temp-buffer
+       (skeleton-insert
+	',(cons nil skeleton))
+       (buffer-string))))
+
+;; example of using t-gen-capture-template
+(defmacro t-gen-capture-template-example (key hashname)
+  (cl-assert (stringp key))
+  (cl-assert (symbolp hashname))
+  `(t-gen-capture-template
+    ((s 't--sexp2string)
+     (e 't-with-current-key-buffer)
+     (c 't-control-key-counter)
+     (p 'macroexpand-all))
+    "* [[%:link][%:description]]\s"
+    "%" (s (p '(e ,key (t-add-repeat-tag (md5 "%:link") ,hashname 'gethash)))) \n
+    ":PROPERTIES:" \n
+    ":YYOB-ID:\s"
+    "%" (s (p '(e ,key (if (string= (t-add-repeat-tag (md5 "%:link") ,hashname 'gethash) "")
+			   (progn (puthash (md5 "%:link") (c ,key 'z) ,hashname)
+				  (c ,key))
+			 (gethash (md5 "%:link") ,hashname)))))
+    \n
+    ":YYOB-CREATE-TIME:\s" "%T" \n
+    ":YYOB-MD5:\s" "%" (s '(md5 "%:link")) \n
+    ":END:\s"
+    (s '(if (string= "" "%i") "" "\n%i"))))
 
 (provide 'yyorg-bookmark)
 
