@@ -22,12 +22,13 @@ yyorg-bookmark —— 基于 org-mode 的书签管理插件
 - `C-c m` 根据当前书签更新缓存
 - `C-c u` 从书签 url 下载网页
 - `C-c r` 清空 `org-agenda-files`
+- `C-c s` 重启 emacs server
 
 由于本人不是经常使用 linux 系统，下载网页的函数 `yyorg-bookmark-use-wget` 需要少许修改以在 linux 上正常运行。
 
 ## 环境要求与安装
 
-- 本插件使用了 shorthands 功能，故需要 emacs28.1 或以上
+- 本插件使用了 `shorthands` 功能，故需要 emacs28.1 或以上
 - Windows 操作系统
 - 若使用 linux，可参考最上面相关项目 `org-capture-extension` 中的配置方法
 
@@ -57,7 +58,7 @@ git clone https://github.com/include-yy/yyorg-bookmark
 
 ## 简单配置
 
-文件 `enchant.org` 中默认有两个 org-capture 模板，"l" 作为示例模板，"yyobp" 作为 org-protocol 使用的模板。若想在某个书签文件中添加新模板，在文件的代码部分添加即可。
+文件 `enchant.org` 中默认有两个 org-capture 模板，"l" 作为示例模板，"test" 作为 org-protocol 使用的模板。若想在某个书签文件中添加新模板，在文件的代码部分添加即可。
 
 文件 `tmscript.js` 中有两个模板名，其中第二个不起作用仅作示例，想要修改的话可根据注释提示添加或删除
 
@@ -71,7 +72,9 @@ let all = [
 ];
 ```
 
-书签文件在添加 `enchant.org` 文件内容后会有 `YYOB-MANAGEMENT` 标题，管理代码位于其中，可直接修改代码来启动/关闭功能，或添加自己需要的功能，比如快捷键。
+书签文件在添加 `enchant.org` 文件内容后会有 `YYOB-MANAGEMENT` 标题，管理代码位于其中，可直接修改代码来启动/关闭功能，或添加自己需要的功能，比如快捷键。两个默认模板默认不载入，需要将代码块开头的局部变量 `yyob-use-simple` 或 `yyob-use-protocol-example` 设为 `t` 再重新载入文件。
+
+请将模板代码块最后的 `yyorg-bookmark-gen-keymap-minor-mode` 的第一参数设置为与文件内容相关的一个唯一名字，以免出现冲突。（已添加重命名功能，不会冲突）
 
 **注意：请确保多个书签文件中的 capture 模板名各不相同，否则会引起冲突**
 
@@ -81,10 +84,6 @@ let all = [
 
 使用 `org-capture-templates` 中的文件名信息可将模板与目标文件相关联，这就允许书签文件中的局部代码通过全局变量 `org-capture-templates` 来找到自己所在 buffer，从而获取 buffer-local 信息。
 
+使用 `skeleton.el` 添加了模板功能，可增强模板的可读性。
+
 [详细介绍](./article/index.org)
-
-## 待实现的功能
-
-- 基于时间的搜索功能
-- 导入或导出浏览器书签格式文件
-

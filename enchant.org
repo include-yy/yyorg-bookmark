@@ -51,7 +51,8 @@
 
     (funcall yyob-refresh))
 
-  (yyorg-bookmark-gen-keymap-minor-mode example yyob-keymap
+  (yyorg-bookmark-gen-keymap-minor-mode test yyob-keymap
+    ;; add keybinding here
     ("C-c m" . (yyorg-bookmark-gen-command-with-message
 		(lambda () (setq org-agenda-files nil)) t "clear org agenda files"))
     ("C-c s" . 'yyorg-bookmark-restart-server))
