@@ -349,10 +349,23 @@ amap must be nil or a symbol containing keymap"
 	 (minor-mode-name (intern (concat "yyob-"
 					  (symbol-name keyname)
 					  "-mode")))
+	 (minor-mode-name (if (not (boundp minor-mode-name)) minor-mode-name
+			    (let ((c t) (n 0) (r nil))
+			      (while c
+				(let ((newsym
+				       (intern (concat
+						"yyob-" (symbol-name keyname)
+						(number-to-string n) "-mode"))))
+				  (when (not (boundp newsym))
+				    (setq r newsym)
+				    (setq c nil))
+				  (cl-incf n)))
+			      r)))
 	 (keys-form (mapcar (lambda (x)
 			      `(define-key ,map-name (kbd ,(car x)) ,(cdr x)))
 			    keys-pair)))
-    (cl-assert (not (boundp minor-mode-name)))
+    ;; (cl-assert (not (boundp minor-mode-name)))
+    ;; just use a new name, see code above
     `(let ((,map-name (make-sparse-keymap)))
        ,@keys-form
        ,(when amap `(setq ,map-name
@@ -381,6 +394,7 @@ else use a one length list's fst element as value"
 		      `(cdr (assoc ,value-or-name x))
 		    (car value-or-name))))
     `(lambda ()
+       (interactive)
        (setq-local ,hashname (make-hash-table :test 'equal))
        (let* ((pro-list (t-get-all-entries-properties-under-headline
 			 ',pros ,headline-name)))
@@ -395,6 +409,7 @@ it kill the subtree at the same time
 m1 is a string used for another same key item exists in file
 m2 is a string used for no other same key item exists"
   `(lambda ()
+     (interactive)
      (let ((h-key (t--get-property ,keyname t)))
        (org-cut-subtree)
        (if (org-find-property ,keyname h-key)
@@ -411,6 +426,7 @@ it is similar to gen-remove-hashtable"
 		     `(t--get-property ,name-or-value t)
 		   (car name-or-value))))
     `(lambda ()
+       (interactive)
        (let* ((h-key (t--get-property ,keyname t))
 	      (h-val ,h-value))
 	 (if (gethash h-key ,hashname)
@@ -467,21 +483,21 @@ the result is 2"
   `(t-gen-capture-template
     ((s 't--sexp2string)
      (e 't-with-current-key-buffer)
-     (c 't-control-key-counter)
      (p 'macroexpand-all))
     "* [[%:link][%:description]]\s"
     "%" (s (p '(e ,key (t-add-repeat-tag (md5 "%:link") ,hashname 'gethash)))) \n
     ":PROPERTIES:" \n
     ":YYOB-ID:\s"
     "%" (s (p '(e ,key (if (string= (t-add-repeat-tag (md5 "%:link") ,hashname 'gethash) "")
-			   (progn (puthash (md5 "%:link") (c ,key 'z) ,hashname)
-				  (c ,key))
+			   (progn (puthash (md5 "%:link")
+					   (t-control-key-counter ,key 'z) ,hashname)
+				  (t-control-key-counter ,key))
 			 (gethash (md5 "%:link") ,hashname)))))
     \n
     ":YYOB-CREATE-TIME:\s" "%T" \n
     ":YYOB-MD5:\s" "%" (s '(md5 "%:link")) \n
     ":END:\s"
-    (s '(if (string= "" "%i") "" "\n%i"))))
+    "%" (s '(if (string= "" "%i") "" "\n%i"))))
 
 (provide 'yyorg-bookmark)
 

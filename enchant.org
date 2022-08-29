@@ -9,95 +9,55 @@
   (require 'yyorg-bookmark)
 
   (setq lexical-binding t)
-  (setq-local yyob-use-example t)
-  (setq-local yyob-use-protocol t)
+  (setq-local yyob-use-simple nil)
+  (setq-local yyob-use-protocol-example nil)
   (setq-local yyob-headline "Bookmarks")
   (setq-local org-attach-directory "yyob_data/")
+  (setq-local yyob-keymap (make-sparse-keymap))
 
-  ;; example add template
+  ;; a simple example template
   ;; try it with M-x org-capture l
-  (when yyob-use-example
+  (when yyob-use-simple
     (yyorg-bookmark-add-template
      :key "l"
-     :desc "Add browser bookmark"
+     :desc "Add simple bookmark"
      :type 'entry
-     :target `(file+headline ,(buffer-file-name) "Bookmarks")
+     :target `(file+headline ,(buffer-file-name) ,yyob-headline)
      :temp "* %c %^g\n:PROPERTIES:\n:YYOB-CREATE-TIME: %T\n:YYOB-ID: %(yyorg-bookmark-control-key-counter \"l\")\n:END:"
      :props '(:prepend t)))
 
-  ;;get current items' md5 value, and add to hashtable
-  (when yyob-use-protocol
-    (setq-local yyob-refresh
-		(lambda ()
-		  (setq-local yyob-hashtable (make-hash-table :test 'equal))
-		  (let* ((pro-list (yyorg-bookmark-get-all-entries-properties-under-headline
-				    '("YYOB-ID" "YYOB-MD5") yyob-headline)))
-		    (mapc (lambda (x) (puthash (cdr (assoc "YYOB-MD5" x))
-					       (cdr (assoc "YYOB-ID" x))
-					       yyob-hashtable))
-			  pro-list))))
-    (funcall yyob-refresh)
-    (local-set-key (kbd "C-c r")
-		   (lambda ()
-		     (interactive)
-		     (funcall yyob-refresh)
-		     (message "refresh hashtable done"))))
-
-  ;; use org-protocol
-  (when yyob-use-protocol
+  ;; a more complex example
+  ;; get current items' md5 value, and add to hashtable
+  (when yyob-use-protocol-example
     (yyorg-bookmark-add-template
-     :key "yyobp"
-     :desc "Add browser bookmark"
+     :key "test"
+     :desc "Add description here"
      :type 'entry
-     :target `(file+headline ,(buffer-file-name) "Bookmarks")
-     :temp "* [[%:link][%:description]] %(yyorg-bookmark-add-repeat-tag (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable) 'gethash)\n:PROPERTIES:\n:YYOB-ID: %(if (string= (yyorg-bookmark-add-repeat-tag (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable) 'gethash) \"\") (progn (puthash (md5 \"%:link\") (yyorg-bookmark-control-key-counter \"yyobp\" 'z) (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable)) (yyorg-bookmark-control-key-counter \"yyobp\")) (gethash (md5 \"%:link\") (yyorg-bookmark-get-local-value \"yyobp\" 'yyob-hashtable)))\n:YYOB-CREATE-TIME: %T\n:YYOB-MD5: %(md5 \"%:link\")\n:END:%(if (string= \"\" \"%i\") \"\" \"\n%i\")"
-     :props '(:prepend t :immediate-finish t :jump-to-captured t)))
+     :target `(file+headline ,(buffer-file-name) ,yyob-headline)
+     :temp (yyorg-bookmark-gen-capture-template-example "test" yyob-hashtable)
+     :props '(:prepend t :immediate-finish t :jump-to-captured t))
 
-  ;; remove/add function in buffer
-  (when yyob-use-protocol
-    (setq-local yyob-remove-func
-		(lambda ()
-		  "remove headline and also update hashtable"
-		  (let ((h-md5 (yyorg-bookmark--get-property "YYOB-MD5" t))
-			(h-id (yyorg-bookmark--get-property "YYOB-ID" t)))
-		    (org-cut-subtree)
-		    (if (org-find-property "YYOB-ID" h-id)
-			(message "one bookmark killed")
-		      (progn (remhash h-md5 (yyorg-bookmark-get-local-value "yyobp" 'yyob-hashtable))
-			     (message "last one killed"))))))
-    (local-set-key (kbd "C-c k")
-		   (lambda ()
-		     (interactive)
-		     (funcall (yyorg-bookmark-get-local-value "yyobp" 'yyob-remove-func))))
-    (setq-local yyob-insert-func
-		(lambda ()
-		  "add headline to hash table"
-		  (let* ((h-md5 (yyorg-bookmark--get-property "YYOB-MD5" t))
-			 (h-id (yyorg-bookmark--get-property "YYOB-ID" t)))
-		    (if (gethash h-md5 (yyorg-bookmark-get-local-value "yyobp" 'yyob-hashtable))
-			(message "add a already exist bookmark")
-		      (message "add a bookmark"))
-		    (puthash h-md5 h-id (yyorg-bookmark-get-local-value "yyobp" 'yyob-hashtable)))))
-    (local-set-key (kbd "C-c i")
-		   (lambda ()
-		     (interactive)
-		     (funcall (yyorg-bookmark-get-local-value "yyobp" 'yyob-insert-func)))))
+    (setq-local yyob-refresh (yyorg-bookmark-gen-create-hashtable
+			      yyob-hashtable "YYOB-MD5" "YYOB-ID" yyob-headline))
+    (setq-local yyob-remove-func (yyorg-bookmark-gen-remove-hashtable
+				  yyob-hashtable "YYOB-MD5"))
+    (setq-local yyob-insert-func (yyorg-bookmark-gen-insert-hashtable
+				  yyob-hashtable "YYOB-MD5" "YYOB-ID"))
+    (define-key yyob-keymap (kbd "C-c r") (yyorg-bookmark-gen-command-with-message
+					   yyob-refresh t "refresh hashtable done"))
+    (define-key yyob-keymap (kbd "C-c k") yyob-remove-func)
+    (define-key yyob-keymap (kbd "C-c i") yyob-insert-func)
+    (define-key yyob-keymap (kbd "C-c u") 'yyorg-bookmark-attach-use-wget-on-headline)
 
-  (local-set-key (kbd "C-c u")
-		 'yyorg-bookmark-attach-use-wget-on-headline)
+    (funcall yyob-refresh))
 
-  (local-set-key (kbd "C-c m")
-		 (lambda ()
-		   (interactive)
-		   (setq org-agenda-files nil)
-		   (message "clear org agenda files")))
-
-  (local-set-key (kbd "C-c s") 'yyorg-bookmark-restart-server)
+  (yyorg-bookmark-gen-keymap-minor-mode example yyob-keymap
+    ("C-c m" . (yyorg-bookmark-gen-command-with-message
+		(lambda () (setq org-agenda-files nil)) t "clear org agenda files"))
+    ("C-c s" . 'yyorg-bookmark-restart-server))
 #+END_SRC
 
 # Local Variables:
-# org-confirm-babel-evaluate: nil 
+# org-confirm-babel-evaluate: nil
 # eval: (progn (org-babel-goto-named-src-block "startup") (org-babel-execute-src-block) (outline-hide-sublevels 1))
 # End:
-
-
