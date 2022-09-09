@@ -19,9 +19,9 @@ yyorg-bookmark —— 基于 org-mode 的书签管理插件
 
 - `C-c k` 删除光标所在位置书签
 - `C-c i` 将光标所在位置书签放入缓存中
-- `C-c m` 根据当前书签更新缓存
+- `C-c r` 根据当前书签更新缓存
 - `C-c u` 从书签 url 下载网页
-- `C-c r` 清空 `org-agenda-files`
+- `C-c m` 清空 `org-agenda-files`
 - `C-c s` 重启 emacs server
 
 由于本人不是经常使用 linux 系统，下载网页的函数 `yyorg-bookmark-use-wget` 需要少许修改以在 linux 上正常运行。
